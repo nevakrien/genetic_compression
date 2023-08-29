@@ -3,19 +3,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef uint16_t block_t;
-#define MAX_BIT_SIZE 16
+// typedef uint8_t[] block_t;
+#define BLOCK_BYTES 9
+#define MAX_BIT_SIZE 8*BLOCK_BYTES
+
+typedef uint16_t bc_t; //bit counter type
 
 typedef struct Node {
-    block_t data;
+    uint8_t data[BLOCK_BYTES];
     struct Node* next;
 } Node;
 
 typedef struct LinkedList {
     Node* head;
     Node* tail;
-    uint8_t current_bit;
-    uint8_t last_block_length;
+    bc_t current_bit;
+    bc_t last_block_length;
 } LinkedList;
 
 
@@ -25,26 +28,27 @@ bool readBytesFromFile(const char* filename, LinkedList* list) {
         return false;
     }
 
-    block_t buffer;
-    while (fread(&buffer, sizeof(block_t), 1, file)) {
-        Node* newNode = (Node*)malloc(sizeof(Node));
-        newNode->data = buffer;
-        newNode->next = NULL;
+    list->head = (Node*)malloc(sizeof(Node));;
+    list->tail = list->head;
 
-        if (!list->head) {
-            list->head = newNode;
-            list->tail = newNode;
-        } else {
-            list->tail->next = newNode;
-            list->tail = newNode;
+    bc_t read_size=fread(&(list->tail->data), 1, BLOCK_BYTES, file);
+
+    while (read_size) {
+        list->tail->next = (Node*)malloc(sizeof(Node));
+        read_size=fread(&(list->tail->next->data), 1, BLOCK_BYTES, file);
+
+        if(!read_size){
+            free(list->tail->next);
+            list->tail->next=NULL;
+            list->last_block_length=MAX_BIT_SIZE;
+            break;
         }
-    }
-
-    // Determine the last byte length
-    long fileSize = ftell(file);
-    list->last_block_length = fileSize % (sizeof(block_t));
-    if (list->last_block_length == 0) {
-        list->last_block_length = sizeof(block_t);
+        list->tail = list->tail->next; 
+        if(read_size<BLOCK_BYTES){
+            list->tail->next=NULL;
+            list->last_block_length=8*read_size;
+            break;
+        }    
     }
 
     fclose(file);
@@ -58,14 +62,12 @@ bool writeBytesToFile(const char* filename, const LinkedList* list) {
     }
 
     Node* current = list->head;
-    block_t buffer;
 
-    while (current) {
-        block_t buffer = current->data;
-        fwrite(&buffer, sizeof(block_t), 1, file);
+    while (current->next) {
+        fwrite(&current->data, 1, BLOCK_BYTES, file);
         current = current->next;
     }
-    fwrite(&buffer, list->last_block_length/8, list->last_block_length, file); 
+    fwrite(&current->data, 1, list->last_block_length/8, file); 
 
     fclose(file);
     return true;

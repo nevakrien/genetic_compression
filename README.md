@@ -6,3 +6,6 @@ In NLP, there was a recent advancement about using compression as a latent space
 
 ## 📏 Scope
 I am mainly just experimenting with the compression itself. I may end up using it for something or maybe I never touch it ever again. Additionally, this is my first ever serious C project 👩‍💻, so I apologize in advance for anyone who has the displeasure of trying to figure out my undoubtedly terrible code. 🙈
+
+## 🎯 Target Architecture
+I'm specifically targeting the x86 architecture 🖥, primarily because that's the computer I have. I'm just crossing my fingers 🤞 that it ports well to CUDA. 
