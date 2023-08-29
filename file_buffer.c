@@ -28,13 +28,32 @@ bool readBytesFromFile(const char* filename, LinkedList* list) {
         return false;
     }
 
-    list->head = (Node*)malloc(sizeof(Node));;
+    list->head = (Node*)malloc(sizeof(Node));
+
+    if (!list->head) { // Memory allocation check
+        fclose(file);
+        return false;
+    } 
+
     list->tail = list->head;
 
     bc_t read_size=fread(&(list->tail->data), 1, BLOCK_BYTES, file);
 
-    while (read_size) {
+    //check for small file edge case
+    if(read_size<BLOCK_BYTES){
+            list->tail->next=NULL;
+            list->last_block_length=8*read_size;
+            fclose(file);
+            return true;
+        }    
+
+    //main loop
+    while (true) {
         list->tail->next = (Node*)malloc(sizeof(Node));
+        if (!list->tail->next) { // Memory allocation check
+            fclose(file);
+            return false;
+        }
         read_size=fread(&(list->tail->next->data), 1, BLOCK_BYTES, file);
 
         if(!read_size){
