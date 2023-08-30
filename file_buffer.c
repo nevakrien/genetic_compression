@@ -4,24 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-//we are going to be using some padding 
-//note that pointers are 8 bytes so its actuly still saving space
-#define BLOCK_BYTES 9
-#define MAX_BIT_SIZE 8*BLOCK_BYTES
-
-typedef uint16_t bc_t; //bit counter type
-
-typedef struct Node {
-    uint8_t data[BLOCK_BYTES];
-    struct Node* next;
-} Node;
-
-typedef struct LinkedList {
-    Node* head;
-    Node* tail; //this is not necesserly the end of the list but the curent area we r working from
-    bc_t current_bit;
-    bc_t last_block_length;
-} LinkedList;
+#include "file_buffer.h"
 
 
 
@@ -107,7 +90,14 @@ void cleanupLinkedList(LinkedList* list) {
 }
 
 
-//untested:
+
+
+LinkedList create_empty_list(){
+   Node* head = (Node*)malloc(sizeof(Node));
+   head->next=NULL;
+   LinkedList list= {head,head,0,0};
+   return list;
+}
 
 void pad_tail(LinkedList* list) {
     if (!list || !list->tail) return;
@@ -126,68 +116,93 @@ void pad_tail(LinkedList* list) {
     memset(&list->tail->data[current_byte], 0, BLOCK_BYTES - current_byte);
 }
 
+bc_t pop_bits(LinkedList* list, const bc_t num, uint8_t* out, bool free_list){
+    bc_t size = 0;
 
-bc_t pop_bits(LinkedList* list,const bc_t num,uint8_t* out,bool free_list){
-    bc_t size=0;
-    while(size<num){
-        while(list->current_bit<MAX_BIT_SIZE){
-            //assining the bit to out
-            uint8_t bit=((list->tail->data[list->current_bit/8]>>(list->current_bit%8))& 0x01);
-            out[size/8]|=(bit*(0x01>>(size%8)));
-            list->current_bit++;
-            size++;
+    while(size < num && list->tail){
+        bc_t available_bits = MAX_BIT_SIZE - list->current_bit;
+        bc_t bits_to_pop = available_bits < (num - size) ? available_bits : (num - size);
+        
+        // Create a mask to isolate the bits we want
+        uint8_t mask = ((1 << bits_to_pop) - 1) << list->current_bit;
+        
+        // Extract the bits
+        uint8_t extracted_bits = (list->tail->data[list->current_bit / 8] & mask) >> list->current_bit;
 
-            if(size==num){
-                return size;
+        // Assign bits to the out array
+        out[size / 8] |= extracted_bits << (size % 8);
+        
+        // Move pointers forward
+        size += bits_to_pop;
+        list->current_bit += bits_to_pop;
+        
+        // If we've consumed all bits in this node
+        if(list->current_bit >= MAX_BIT_SIZE){
+            list->current_bit = 0;
+
+            if(free_list){
+                Node* temp = list->tail->next;
+                free(list->tail);
+                list->tail = temp;
+            }
+            else{
+                list->tail = list->tail->next;
             }
         }
-        
-        //moving block
-        list->current_bit=0;
-        if(free_list){
-            Node* temp=list->tail->next;
-            free(list->tail);
-            list->tail =temp;
-        }
-        else{
-            list->tail=list->tail->next;
-        }
-
-        if(!list->tail){
-            return size;
-        }
-
     }
 
     return size;
-} 
-
-bool append_bits(LinkedList* list,const bc_t num,uint8_t* in){
-    bc_t pos=0;
-    
-    while(pos<num){
-        while(list->current_bit<MAX_BIT_SIZE){
-            uint8_t bit=(in[pos/8]>>(pos%8))& 0x01;
-            list->tail->data[list->current_bit/8]|=(bit*(0x01>>(pos%8)));
-            list->current_bit++;
-            pos++;
-
-            if(pos==num){
-                return true;
-            }
-        }
-
-        list->current_bit=0;
-        list->tail->next = (Node*)malloc(sizeof(Node));
-            if (!list->tail->next) { // Memory allocation check
-                return false;
-            }
-        list->tail = list->tail->next;
-    } 
-
-    return true;  
 }
 
+bool append_bits(LinkedList* list, const bc_t num, uint8_t* in) {
+    bc_t pos = 0;
+
+    while (pos < num) {
+        if (!list->tail) {
+            list->tail = (Node*)malloc(sizeof(Node));
+            if (!list->tail) {
+                return false;
+            }
+            //memset(list->tail->data, 0, sizeof(list->tail->data)); // Initialize to 0
+            list->tail->next = NULL;
+        }
+
+        bc_t space_left = MAX_BIT_SIZE - list->last_block_length;
+        bc_t bits_to_append = space_left < (num - pos) ? space_left : (num - pos);
+
+        // Create a mask to isolate the bits we want from 'in'
+        uint8_t mask = (1 << bits_to_append) - 1;
+        uint8_t bits = (in[pos / 8] >> (pos % 8)) & mask;
+
+        // Insert the bits into the list's tail data
+        list->tail->data[list->last_block_length / 8] |= bits << list->last_block_length;
+
+        // Move pointers forward
+        pos += bits_to_append;
+        list->last_block_length += bits_to_append;
+
+        // If we've filled up the current node
+        if (list->last_block_length >= MAX_BIT_SIZE) {
+            if (list->tail->next) {
+                list->tail = list->tail->next;             
+            } 
+            else {
+                list->tail->next = (Node*)malloc(sizeof(Node));
+                if (!list->tail->next) {
+                    return false;  // Memory allocation failure
+                }
+                //memset(list->tail->next->data, 0, sizeof(list->tail->next->data)); // Initialize to 0
+                list->tail->next->next = NULL;
+                list->tail = list->tail->next;
+            }
+            list->last_block_length = 0;
+        }
+    }
+
+    return true;
+}
+
+//untested:
 // Helper function to create a new node with left-padding
 static Node* createNodeWithLeftPaddedCopy(uint8_t* data, bc_t num_bits) {
     Node* newNode = (Node*)malloc(sizeof(Node));
