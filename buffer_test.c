@@ -29,6 +29,7 @@ int main() {
     const char* outputFilename = "test_garbage/output.dat";
 
     LinkedList list = { NULL, NULL, 0, 0 };
+    
 
     printf("Attempting to read from %s...\n", inputFilename);
     if (!readBytesFromFile(inputFilename, &list)) {
