@@ -28,7 +28,7 @@ bool readBytesFromFile(const char* filename, LinkedList* list);
 bool writeBytesToFile(const char* filename, const LinkedList* list);
 void cleanupLinkedList(LinkedList* list);
 LinkedList create_empty_list();
-void pad_tail(LinkedList* list);
+//void pad_tail(LinkedList* list);
 bc_t pop_bits(LinkedList* list, const bc_t num, uint8_t* out, bool free_list);
 bool append_bits(LinkedList* list, const bc_t num, uint8_t* in);
 

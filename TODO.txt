@@ -1,0 +1,3 @@
+1. add a padding and depadding function that is fully invertible (gona lose a few bits here 3 to 8) 
+2. add a track to the compressed file length 
+3. better documentation 

@@ -99,23 +99,6 @@ LinkedList create_empty_list(){
    return list;
 }
 
-void pad_tail(LinkedList* list) {
-    if (!list || !list->tail) return;
-
-    bc_t current_byte = list->last_block_length / 8;
-    bc_t current_bit_in_byte = list->last_block_length % 8;
-
-    // Set the remaining bits in the current byte to 0
-    uint8_t mask = 0xFF << (8 - current_bit_in_byte);
-    list->tail->data[current_byte] &= mask;
-
-    // If there were remaining bits, move to the next byte
-    if (current_bit_in_byte) current_byte++;
-
-    // Set the rest of the bytes in the block to 0
-    memset(&list->tail->data[current_byte], 0, BLOCK_BYTES - current_byte);
-}
-
 bc_t pop_bits(LinkedList* list, const bc_t num, uint8_t* out, bool free_list){
     bc_t size = 0;
 
@@ -183,10 +166,10 @@ bool append_bits(LinkedList* list, const bc_t num, uint8_t* in) {
 
         // If we've filled up the current node
         if (list->last_block_length >= MAX_BIT_SIZE) {
-            if (list->tail->next) {
-                list->tail = list->tail->next;             
-            } 
-            else {
+            // if (list->tail->next) {
+            //     list->tail = list->tail->next;             
+            // } 
+            // else {
                 list->tail->next = (Node*)malloc(sizeof(Node));
                 if (!list->tail->next) {
                     return false;  // Memory allocation failure
@@ -194,7 +177,7 @@ bool append_bits(LinkedList* list, const bc_t num, uint8_t* in) {
                 //memset(list->tail->next->data, 0, sizeof(list->tail->next->data)); // Initialize to 0
                 list->tail->next->next = NULL;
                 list->tail = list->tail->next;
-            }
+            // }
             list->last_block_length = 0;
         }
     }
@@ -203,21 +186,39 @@ bool append_bits(LinkedList* list, const bc_t num, uint8_t* in) {
 }
 
 //untested:
-// Helper function to create a new node with left-padding
-static Node* createNodeWithLeftPaddedCopy(uint8_t* data, bc_t num_bits) {
-    Node* newNode = (Node*)malloc(sizeof(Node));
-    // Left-padded copy
-    memcpy(newNode->data + (BLOCK_BYTES - (num_bits + 7) / 8), data, (num_bits + 7) / 8); 
-    newNode->next = NULL;
-    return newNode;
-}
 
-// Helper function to create a new node with right-padding
-static Node* createNodeWithRightPaddedCopy(uint8_t* data, bc_t num_bits) {
-    Node* newNode = (Node*)malloc(sizeof(Node));
-    // Right-padded copy
-    memcpy(newNode->data, data, (num_bits + 7) / 8);  
-    newNode->next = NULL;
-    return newNode;
-}
+// void pad_tail(LinkedList* list) {
+//     if (!list || !list->tail) return;
+
+//     bc_t current_byte = list->last_block_length / 8;
+//     bc_t current_bit_in_byte = list->last_block_length % 8;
+
+//     // Set the remaining bits in the current byte to 0
+//     uint8_t mask = 0xFF << (8 - current_bit_in_byte);
+//     list->tail->data[current_byte] &= mask;
+
+//     // If there were remaining bits, move to the next byte
+//     if (current_bit_in_byte) current_byte++;
+
+//     // Set the rest of the bytes in the block to 0
+//     memset(&list->tail->data[current_byte], 0, BLOCK_BYTES - current_byte);
+// }
+
+// // Helper function to create a new node with left-padding
+// static Node* createNodeWithLeftPaddedCopy(uint8_t* data, bc_t num_bits) {
+//     Node* newNode = (Node*)malloc(sizeof(Node));
+//     // Left-padded copy
+//     memcpy(newNode->data + (BLOCK_BYTES - (num_bits + 7) / 8), data, (num_bits + 7) / 8); 
+//     newNode->next = NULL;
+//     return newNode;
+// }
+
+// // Helper function to create a new node with right-padding
+// static Node* createNodeWithRightPaddedCopy(uint8_t* data, bc_t num_bits) {
+//     Node* newNode = (Node*)malloc(sizeof(Node));
+//     // Right-padded copy
+//     memcpy(newNode->data, data, (num_bits + 7) / 8);  
+//     newNode->next = NULL;
+//     return newNode;
+// }
 
