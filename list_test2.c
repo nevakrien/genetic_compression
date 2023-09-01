@@ -4,8 +4,10 @@
 #include "random.h"
 #include "file_buffer.c"
 
-//#define TEST_SIZE 10000
+#define TEST_SIZE 10000
 #define CHUNK 11
+
+uint8_t zero[BLOCK_BYTES]={0};
 
 char* byte_to_binary(uint8_t byte) {
     static char bit_string[9];
@@ -17,20 +19,8 @@ char* byte_to_binary(uint8_t byte) {
     
     return bit_string;
 }
-void show_Node(Node* node){
-    // return;
-    printf("\n");
-    while(node){
-        for(int i=0;i<BLOCK_BYTES;i++){
-            printf("%s\n",byte_to_binary(node->data[i]));
-        }
-        node=node->next;
-    }
-    printf("\n");
-}
 
 int clutter_random(LinkedList* list,pcg32_random_t* rng){
-    printf("appending\n");
     int sum=0;
     for(int i=0;i<CHUNK;i++){
         uint8_t data[BLOCK_BYTES];
@@ -38,11 +28,10 @@ int clutter_random(LinkedList* list,pcg32_random_t* rng){
             data[m]=(uint8_t)pcg32_random_r(rng);
         }
         bc_t num=(bc_t)(pcg32_random_r(rng)%MAX_BIT_SIZE);
-        printf("%d,  ",num);
+    
         sum+=num;
         append_bits(list,num,data);
     }
-    printf("\n");
     return sum;
 }
 
@@ -58,47 +47,56 @@ int trash_random(LinkedList* list,pcg32_random_t* rng,int num){
     return sum;
 }
 
+void random_target(uint8_t* target,bc_t amount,pcg32_random_t* rng){
+    //uint8_t target[BLOCK_BYTES]={0};
+    int i=0;
+    for(i;i<amount/8;i++){
+        target[i]=pcg32_random_r(rng);
+    }
+    if(i<BLOCK_BYTES){
+        bitCopy(target+i, pcg32_random_r(rng),0,0, amount%8);
+    }
+}
+
+void test(bc_t i,pcg32_random_t* rng){
+    //assert(i<=MAX_BIT_SIZE);
+    bc_t amount=(i%MAX_BIT_SIZE)+1;
+    //filling alist with junk payload junk
+    LinkedList list = create_empty_list();
+    int junk=clutter_random(&list,rng);
+    
+
+    uint8_t target[BLOCK_BYTES]={0};
+    random_target(target,amount,rng);
+    uint8_t payload[BLOCK_BYTES];//=target;
+    memcpy(payload,target,BLOCK_BYTES);
+    append_bits(&list,amount,payload);
+    
+    clutter_random(&list,rng);
+
+    list.tail=list.head; 
+
+    int trashed=trash_random(&list,rng,junk);
+    assert(trashed==junk);
+
+    memcpy(payload,zero,BLOCK_BYTES);
+    bc_t poped=pop_bits(&list,amount,payload,true);
+    assert(poped==amount);
+    assert(memcmp(payload,target,BLOCK_BYTES)==0);
+
+    list.head=list.tail;
+    cleanupLinkedList(&list);
+}
+
 int main() {
     // Initialize random generator
     pcg32_random_t rng = get_rng();
 
-    //filling alist with junk payload junk
-    LinkedList list = create_empty_list();
-    printf("first clutter\n");
-    fflush(stdout);
-    int junk=clutter_random(&list,&rng);
-    printf("junk:%d\n",junk);
-    show_Node(list.head);
+    for(int i=0;i<TEST_SIZE;i++){
+        printf("testing: %d\n",i);
+        test(i,&rng);
+    }
     
-    printf("payload\n");
-    uint8_t target=1;
-    uint8_t payload=target;
-    append_bits(&list,8,&payload);
-    show_Node(list.head);
-    
-    printf("second clutter\n");
-    fflush(stdout);
-    clutter_random(&list,&rng);
-    show_Node(list.head); 
-
-    list.tail=list.head; 
-    printf("trashing: %d\n",junk/MAX_BIT_SIZE);
-    fflush(stdout);
-    int trashed=trash_random(&list,&rng,junk);
-    assert(trashed==junk);
-    //assert(!list.tail);
-    show_Node(list.tail);
-    
-    printf("poping payload\n");
-    fflush(stdout);
-    payload = 0;  // Reset before reusing
-    bc_t poped=pop_bits(&list,8,&payload,true);
-    assert(poped==8);
-    assert(payload==target);
-
-    printf("cleanup\n");
-    list.head=list.tail;
-    cleanupLinkedList(&list);
     printf("all test passed!!!\n");
 
     return 0;

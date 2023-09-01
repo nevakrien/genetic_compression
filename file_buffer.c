@@ -94,38 +94,73 @@ void cleanupLinkedList(LinkedList* list) {
 
 LinkedList create_empty_list(){
    Node* head = (Node*)malloc(sizeof(Node));
+   memset(head->data,0,BLOCK_BYTES);
    head->next=NULL;
-   LinkedList list= {head,head,0,0};
+   LinkedList list = {
+       .head = head,
+       .tail = head,
+       .current_bit = 0,
+       .last_block_length = 0
+   };
    return list;
 }
+
+static bc_t room_finder(bc_t a, bc_t b, bc_t max) {
+    a = 8 - a % 8;
+    b = 8 - b % 8;
+    
+    bc_t ans = (a < b) ? a : b;
+    ans = (ans < max) ? ans : max;
+
+    return ans;
+}
+
+
+static void bitCopy(uint8_t *destByte, uint8_t srcByte, int destPos, int srcPos, int size) {
+    // Create a mask for the source bits.
+    uint8_t src_mask = ((0xFF >> (8 - size)) & 0xFF) << srcPos;
+    uint8_t isolated_bits = srcByte & src_mask;
+
+    // Shift to align with destination.
+    int diff = destPos - srcPos;
+    if(diff > 0) {
+        isolated_bits <<= diff;
+    } else {
+        isolated_bits >>= (-diff);
+    }
+
+    // Create a mask for the destination bits.
+    uint8_t dest_mask = ((0xFF >> (8 - size)) & 0xFF) << destPos;
+
+    // Clear the destination bits first.
+    *destByte &= ~dest_mask;
+
+    // Now, combine the bits.
+    *destByte |= isolated_bits;
+}
+
+
 
 bc_t pop_bits(LinkedList* list, const bc_t num, uint8_t* out, bool free_list){
     bc_t size = 0;
 
     while(size < num && list->tail){
-        bc_t available_bits = MAX_BIT_SIZE - list->current_bit;
-        bc_t bits_to_pop = available_bits < (num - size) ? available_bits : (num - size);
-        
-        // Create a mask to isolate the bits we want
-        uint8_t mask = ((1 << bits_to_pop) - 1) << list->current_bit;
-        
-        // Extract the bits
-        uint8_t extracted_bits = (list->tail->data[list->current_bit / 8] & mask) >> list->current_bit;
+        bc_t bits_to_pop=room_finder(list->current_bit,size,num - size);
 
-        // Assign bits to the out array
-        out[size / 8] |= extracted_bits << (size % 8);
+        bitCopy(out+(size / 8),list->tail->data[list->current_bit / 8],(size % 8),(list->current_bit % 8),bits_to_pop);
         
         // Move pointers forward
         size += bits_to_pop;
         list->current_bit += bits_to_pop;
         
         // If we've consumed all bits in this node
-        if(list->current_bit >= MAX_BIT_SIZE){
+        if(list->current_bit == MAX_BIT_SIZE){
             list->current_bit = 0;
 
             if(free_list){
                 Node* temp = list->tail->next;
                 free(list->tail);
+                //temp->next=NULL;
                 list->tail = temp;
             }
             else{
@@ -146,19 +181,11 @@ bool append_bits(LinkedList* list, const bc_t num, uint8_t* in) {
             if (!list->tail) {
                 return false;
             }
-            //memset(list->tail->data, 0, sizeof(list->tail->data)); // Initialize to 0
+            memset(list->tail->data, 0, sizeof(list->tail->data)); // Initialize to 0
             list->tail->next = NULL;
         }
-
-        bc_t space_left = MAX_BIT_SIZE - list->last_block_length;
-        bc_t bits_to_append = space_left < (num - pos) ? space_left : (num - pos);
-
-        // Create a mask to isolate the bits we want from 'in'
-        uint8_t mask = (1 << bits_to_append) - 1;
-        uint8_t bits = (in[pos / 8] >> (pos % 8)) & mask;
-
-        // Insert the bits into the list's tail data
-        list->tail->data[list->last_block_length / 8] |= bits << list->last_block_length;
+        bc_t bits_to_append=room_finder(list->last_block_length,pos,num - pos);
+        bitCopy(list->tail->data+(list->last_block_length / 8),in[pos / 8],list->last_block_length%8,(pos % 8),bits_to_append);
 
         // Move pointers forward
         pos += bits_to_append;
@@ -166,18 +193,15 @@ bool append_bits(LinkedList* list, const bc_t num, uint8_t* in) {
 
         // If we've filled up the current node
         if (list->last_block_length >= MAX_BIT_SIZE) {
-            // if (list->tail->next) {
-            //     list->tail = list->tail->next;             
-            // } 
-            // else {
-                list->tail->next = (Node*)malloc(sizeof(Node));
-                if (!list->tail->next) {
-                    return false;  // Memory allocation failure
-                }
-                //memset(list->tail->next->data, 0, sizeof(list->tail->next->data)); // Initialize to 0
-                list->tail->next->next = NULL;
-                list->tail = list->tail->next;
-            // }
+            
+            list->tail->next = (Node*)malloc(sizeof(Node));
+            if (!list->tail->next) {
+                return false;  // Memory allocation failure
+            }
+            memset(list->tail->next->data, 0, sizeof(list->tail->next->data)); // Initialize to 0
+            list->tail = list->tail->next;
+            list->tail->next= NULL;
+   
             list->last_block_length = 0;
         }
     }
@@ -186,6 +210,47 @@ bool append_bits(LinkedList* list, const bc_t num, uint8_t* in) {
 }
 
 //untested:
+bool lists_are_equal(LinkedList* A,LinkedList* B){
+    if(A->last_block_length!=B->last_block_length){
+        return false;
+    }
+    Node* a=A->head;
+    Node* b=B->head;
+
+    if(!a && !b){return true;}
+    if(!a || !b){return false;}
+
+    while(a->next && b-> next){
+        if(memcmp(a->data,b->data,BLOCK_BYTES)!=0){
+            return false;
+        }
+        a=a->next;
+        b=b->next;
+    }
+    if(!a->next != !b->next){return false;}
+    if(memcmp(a->data,b->data,BLOCK_BYTES)!=0){return false;}
+    return true;
+}
+
+LinkedList copy_list(LinkedList a){
+    LinkedList b=a;
+    Node* cur=b.head;
+    Node* n = (Node*)malloc(sizeof(Node));
+    memcpy(n->data,cur->data,BLOCK_BYTES);
+    b.head=n;
+    b.tail=n;
+    while(cur->next){
+        n = (Node*)malloc(sizeof(Node));
+        memcpy(n->data,cur->next->data,BLOCK_BYTES);
+        b.tail->next=n;
+        b.tail=n;
+        
+        cur=cur->next;
+    }
+    b.tail->next=NULL;
+    return b;
+    
+}
 
 // void pad_tail(LinkedList* list) {
 //     if (!list || !list->tail) return;

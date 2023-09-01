@@ -1,3 +1,8 @@
 1. add a padding and depadding function that is fully invertible (gona lose a few bits here 3 to 8) 
 2. add a track to the compressed file length 
-3. better documentation 
+3. better documentation  
+
+bugs: 
+1. copy bytes is goffy gives wrong outputs.
+2. append bits returns weird values
+2. for some reason pop dosent free when it should?

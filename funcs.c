@@ -3,6 +3,7 @@
 #include <string.h>
 #include "file_buffer.h"
 
+//untested:
 
 //made to be used with new lists and before outputing
 uint32_t RLE_encoding(LinkedList* in,uint32_t* length,LinkedList* out,uint8_t window,bool free_in){
@@ -81,4 +82,86 @@ uint32_t RLE_decoding(LinkedList* in,uint32_t* length,LinkedList* out,uint8_t wi
 		}
 	}
 	
+} 
+
+void PAD(LinkedList* in){
+	LinkedList copy=*in;
+	while(copy.tail->next){
+		copy.tail=copy.tail->next;
+	} 
+	printf("last block:%d   ",copy.last_block_length);
+	int padding=8-(copy.last_block_length%8)-3;
+	printf("padding number:%d",padding);
+
+	uint8_t stock=0;
+	if(padding<0){
+		padding+=8;
+		printf("  changed padding number:%d",padding);
+		// append_bits(&copy,8, &stock);
+	}
+	printf("\n");
+	append_bits(&copy,padding, &stock);
+	stock=padding;
+	append_bits(&copy,3, &stock);
+	in->last_block_length=copy.last_block_length;
+}
+//mpt done:
+static Node* get_prelast(LinkedList* copy){
+	Node* prelast=copy->head;
+	copy->tail=prelast;
+
+	while(copy->tail->next){
+		prelast=copy->tail;
+		copy->tail=copy->tail->next;
+	}
+	return prelast;
+}
+
+//should return a zero padded list instead keeps the original data as it was...
+//WARNING!!! this function depends on the specific implementation of append_bits
+bool UNPAD(LinkedList* in){
+	LinkedList copy=*in;
+	
+	//exceptions
+	if(copy.last_block_length%8)return false;
+	
+	Node* prelast=NULL;
+	while(copy.tail->next){
+		prelast=copy.tail;
+		copy.tail=copy.tail->next;
+	}
+
+	//finding the padding
+	int idx=copy.last_block_length-3;
+	
+	if(idx<0) return false; //idx should always be at least 4 in all valid blocks
+	printf("initial idx:%d",idx);
+
+	copy.current_bit=idx;
+	uint8_t padding=0;
+	pop_bits(&copy,3,&padding ,false);
+
+	//setting
+	idx-=padding;
+	printf("   minus padding:%d",idx);
+	if(idx<0){
+		if(!prelast){
+			prelast=get_prelast(&copy);
+		}
+		copy.tail=prelast;
+		in->tail=prelast;
+		free(prelast->next);
+		prelast->next=NULL;
+		idx+=8;//MAX_BIT_SIZE;
+		printf("  fixed overflow:%d",idx);
+	}
+	printf("\n");
+	in->last_block_length=idx;
+	//reseting the pad to 0 
+	copy.current_bit=idx; 
+	padding+=3; //acounting for the 3 bits that right the pading
+	uint8_t zero=255;
+	printf("num zeros:%d\n",padding);
+	append_bits(&copy, padding, &zero);
+	return true;
 }

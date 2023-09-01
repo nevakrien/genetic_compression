@@ -6,7 +6,7 @@
 
 //we are going to be using some padding 
 //note that pointers are 8 bytes so its actuly still saving space
-#define BLOCK_BYTES 9
+#define BLOCK_BYTES 9 //at least 2
 #define MAX_BIT_SIZE 8*BLOCK_BYTES
 
 typedef uint16_t bc_t; //bit counter type
@@ -31,5 +31,9 @@ LinkedList create_empty_list();
 //void pad_tail(LinkedList* list);
 bc_t pop_bits(LinkedList* list, const bc_t num, uint8_t* out, bool free_list);
 bool append_bits(LinkedList* list, const bc_t num, uint8_t* in);
+
+//untested
+bool lists_are_equal(LinkedList* A,LinkedList* B);
+LinkedList copy_list(LinkedList a);
 
 #endif //FILE_BUFFER_H
