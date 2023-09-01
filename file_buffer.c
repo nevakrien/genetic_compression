@@ -145,14 +145,6 @@ bc_t pop_bits(LinkedList* list, const bc_t num, uint8_t* out, bool free_list){
     bc_t size = 0;
 
     while(size < num && list->tail){
-        bc_t bits_to_pop=room_finder(list->current_bit,size,num - size);
-
-        bitCopy(out+(size / 8),list->tail->data[list->current_bit / 8],(size % 8),(list->current_bit % 8),bits_to_pop);
-        
-        // Move pointers forward
-        size += bits_to_pop;
-        list->current_bit += bits_to_pop;
-        
         // If we've consumed all bits in this node
         if(list->current_bit == MAX_BIT_SIZE){
             list->current_bit = 0;
@@ -164,32 +156,29 @@ bc_t pop_bits(LinkedList* list, const bc_t num, uint8_t* out, bool free_list){
                 list->tail = temp;
             }
             else{
+                if(!list->tail->next){return size;}
                 list->tail = list->tail->next;
             }
         }
+
+        bc_t bits_to_pop=room_finder(list->current_bit,size,num - size);
+
+        bitCopy(out+(size / 8),list->tail->data[list->current_bit / 8],(size % 8),(list->current_bit % 8),bits_to_pop);
+        
+        // Move pointers forward
+        size += bits_to_pop;
+        list->current_bit += bits_to_pop;
+        
     }
 
     return size;
 }
 
 bool append_bits(LinkedList* list, const bc_t num, uint8_t* in) {
+    if(num==0){return true;}
     bc_t pos = 0;
 
     while (pos < num) {
-        if (!list->tail) {
-            list->tail = (Node*)malloc(sizeof(Node));
-            if (!list->tail) {
-                return false;
-            }
-            memset(list->tail->data, 0, sizeof(list->tail->data)); // Initialize to 0
-            list->tail->next = NULL;
-        }
-        bc_t bits_to_append=room_finder(list->last_block_length,pos,num - pos);
-        bitCopy(list->tail->data+(list->last_block_length / 8),in[pos / 8],list->last_block_length%8,(pos % 8),bits_to_append);
-
-        // Move pointers forward
-        pos += bits_to_append;
-        list->last_block_length += bits_to_append;
 
         // If we've filled up the current node
         if (list->last_block_length >= MAX_BIT_SIZE) {
@@ -203,7 +192,16 @@ bool append_bits(LinkedList* list, const bc_t num, uint8_t* in) {
             list->tail->next= NULL;
    
             list->last_block_length = 0;
-        }
+        } 
+
+        bc_t bits_to_append=room_finder(list->last_block_length,pos,num - pos);
+        bitCopy(list->tail->data+(list->last_block_length / 8),in[pos / 8],list->last_block_length%8,(pos % 8),bits_to_append);
+
+        // Move pointers forward
+        pos += bits_to_append;
+        list->last_block_length += bits_to_append;
+
+        
     }
 
     return true;
@@ -244,7 +242,7 @@ LinkedList copy_list(LinkedList a){
         memcpy(n->data,cur->next->data,BLOCK_BYTES);
         b.tail->next=n;
         b.tail=n;
-        
+
         cur=cur->next;
     }
     b.tail->next=NULL;

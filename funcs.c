@@ -158,10 +158,10 @@ bool UNPAD(LinkedList* in){
 	printf("\n");
 	in->last_block_length=idx;
 	//reseting the pad to 0 
-	copy.current_bit=idx; 
+	copy.last_block_length=idx; 
 	padding+=3; //acounting for the 3 bits that right the pading
-	uint8_t zero=255;
+	uint8_t zero[2]={0};
 	printf("num zeros:%d\n",padding);
-	append_bits(&copy, padding, &zero);
+	append_bits(&copy, padding, zero);
 	return true;
 }

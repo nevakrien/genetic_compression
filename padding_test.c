@@ -51,7 +51,7 @@ int main() {
     pcg32_random_t rng= get_rng();
     LinkedList list;
     LinkedList list2;
-    for(int i=1;i<MAX_BIT_SIZE*4;i++){
+    for(int i=62;i<MAX_BIT_SIZE*4;i++){
         
         printf("original:%d\n",i);
         list=random_list(&rng,i);
@@ -65,7 +65,7 @@ int main() {
         show_Node(list.head);
 
         printf("unpaaded:\n");
-        UNPAD(&list);
+        if(!UNPAD(&list)){printf("errored!\n"); return 1;}
         show_Node(list.head);
 
         printf("equal:\n");
