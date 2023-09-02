@@ -123,6 +123,7 @@ bool UNPAD(LinkedList* in){
 	LinkedList copy=*in;
 	
 	//exceptions
+	printf("last_block_length :%d   ",copy.last_block_length);
 	if(copy.last_block_length%8)return false;
 	
 	Node* prelast=NULL;
@@ -134,8 +135,9 @@ bool UNPAD(LinkedList* in){
 	//finding the padding
 	int idx=copy.last_block_length-3;
 	
-	if(idx<0) return false; //idx should always be at least 4 in all valid blocks
 	printf("initial idx:%d",idx);
+	if(idx<0) return false; //idx should always be at least 4 in all valid blocks
+	
 
 	copy.current_bit=idx;
 	uint8_t padding=0;
@@ -144,19 +146,25 @@ bool UNPAD(LinkedList* in){
 	//setting
 	idx-=padding;
 	printf("   minus padding:%d",idx);
-	if(idx<0){
+	if(idx<=0){
+		//this is where the bug is at
 		if(!prelast){
 			prelast=get_prelast(&copy);
 		}
 		copy.tail=prelast;
-		in->tail=prelast;
+		if(in->tail==prelast->next){
+			in->tail=prelast;
+		}
 		free(prelast->next);
 		prelast->next=NULL;
-		idx+=8;//MAX_BIT_SIZE;
+		idx+=MAX_BIT_SIZE;
+		padding-=8;
 		printf("  fixed overflow:%d",idx);
 	}
+
 	printf("\n");
 	in->last_block_length=idx;
+
 	//reseting the pad to 0 
 	copy.last_block_length=idx; 
 	padding+=3; //acounting for the 3 bits that right the pading

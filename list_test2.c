@@ -5,7 +5,7 @@
 #include "file_buffer.c"
 
 #define TEST_SIZE 10000
-#define CHUNK 11
+#define CHUNK 100
 
 uint8_t zero[BLOCK_BYTES]={0};
 
@@ -31,6 +31,7 @@ int clutter_random(LinkedList* list,pcg32_random_t* rng){
     
         sum+=num;
         append_bits(list,num,data);
+        assert(list->last_block_length<=MAX_BIT_SIZE);
     }
     return sum;
 }
@@ -71,6 +72,7 @@ void test(bc_t i,pcg32_random_t* rng){
     uint8_t payload[BLOCK_BYTES];//=target;
     memcpy(payload,target,BLOCK_BYTES);
     append_bits(&list,amount,payload);
+    assert(list.last_block_length<=MAX_BIT_SIZE);
     
     clutter_random(&list,rng);
 

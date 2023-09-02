@@ -41,7 +41,6 @@ LinkedList random_list(pcg32_random_t* rng,int length) {
         append_bits(&list, extra, &byte);
     }
 
-    list.last_block_length=length;
     return list;
 }
 
@@ -51,7 +50,7 @@ int main() {
     pcg32_random_t rng= get_rng();
     LinkedList list;
     LinkedList list2;
-    for(int i=62;i<MAX_BIT_SIZE*4;i++){
+    for(int i=1;i<MAX_BIT_SIZE*4;i++){
         
         printf("original:%d\n",i);
         list=random_list(&rng,i);
@@ -70,6 +69,8 @@ int main() {
 
         printf("equal:\n");
         if(!lists_are_equal(&list,&list2)){
+            printf("end A:%d end B:%d\n",list.last_block_length,list2.last_block_length);
+            printf("start A:%d start B:%d\n",list.current_bit,list2.current_bit);
             printf("failed %d\n",i);
             // printf("padded:\n");
             // show_Node(list.head);
