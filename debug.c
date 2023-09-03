@@ -1,6 +1,7 @@
 #ifndef DEBUG_C
 #define DEBUG_C
 
+#include "random.h"
 char* byte_to_binary(uint8_t byte) {
     static char bit_string[9];
     bit_string[8] = '\0';

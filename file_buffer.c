@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "file_buffer.h"
-#include"debugc.c"
+//#include"debug.c"
 
 
 bool readBytesFromFile(const char* filename, LinkedList* list) {
@@ -141,10 +141,29 @@ static void bitCopy(uint8_t *destByte, uint8_t srcByte, int destPos, int srcPos,
 
 
 
-bc_t pop_bits(LinkedList* list, const bc_t num, uint8_t* out, bool free_list){
+//need to check last block length
+static bc_t pop_bits_end(bc_t* size,LinkedList* list, bc_t num, uint8_t* out){
+    //bc_t size = 0;
+    num=num>list->last_block_length ? list->last_block_length : num; 
+
+    while(*size < num && list->tail){
+        
+        bc_t bits_to_pop=room_finder(list->current_bit,*size,num - *size);
+
+        bitCopy(out+(*size / 8),list->tail->data[list->current_bit / 8],(*size % 8),(list->current_bit % 8),bits_to_pop);
+        
+        // Move pointers forward
+        *size += bits_to_pop;
+        list->current_bit += bits_to_pop;
+        
+    }
+
+}
+
+static bc_t pop_bits_regular(LinkedList* list,const bc_t num, uint8_t* out, bool free_list){
     bc_t size = 0;
 
-    while(size < num && list->tail){
+    while(size < num && list->tail->next){
         // If we've consumed all bits in this node
         if(list->current_bit == MAX_BIT_SIZE){
             list->current_bit = 0;
@@ -173,6 +192,15 @@ bc_t pop_bits(LinkedList* list, const bc_t num, uint8_t* out, bool free_list){
         
     }
 
+    return size;
+}
+
+bc_t pop_bits(LinkedList* list, const bc_t num, uint8_t* out, bool free_list){
+    if(!list->tail){
+        return 0;
+    }
+    bc_t size = pop_bits_regular(list,num,out,free_list);
+    pop_bits_end(&size,list,num-size,out);
     return size;
 }
 
