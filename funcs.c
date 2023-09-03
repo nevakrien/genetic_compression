@@ -2,11 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include "file_buffer.h"
+#include "debug.c"
 
 //untested:
-
+typedef uint32_t l_t;
+#define MAX_WINDOW 30//(256-7) max
 //made to be used with new lists and before outputing
-uint32_t RLE_encoding(LinkedList* in,uint32_t* length,LinkedList* out,uint8_t window,bool free_in){
+l_t RLE_encoding(LinkedList* in,l_t* length,LinkedList* out,uint8_t window,bool free_in){
+
+	l_t ans=0;
 	uint8_t zero=0;
 	uint8_t one=1;
 
@@ -19,6 +23,7 @@ uint32_t RLE_encoding(LinkedList* in,uint32_t* length,LinkedList* out,uint8_t wi
 
 	
 	bc_t poped=pop_bits(in,window,next,free_in);
+	printf("poped:%u\n",poped);
 	*length-=poped;
 	memcpy(curent,next,size); 
 
@@ -28,82 +33,113 @@ uint32_t RLE_encoding(LinkedList* in,uint32_t* length,LinkedList* out,uint8_t wi
 		*length-=poped;
 		if(memcmp(next,curent,size)==0){
 			append_bits(out, 1, &zero);
+			ans+=1;
 		}
 
 		else{
-			
 			append_bits(out, 1, &one);
 			append_bits(out,window,curent);
+			ans+=1+window;
 			memcpy(curent,next,size); 
 		}
 	}
 	//wright the last run token
 	append_bits(out, 1, &one);
 	append_bits(out,window,curent); 
+	ans+=1+window;
 
 	//remainder
 	append_bits(out,poped,next);
+	ans+=poped;
 	poped=pop_bits(in,*length,next,free_in);
 	*length-=poped;
 	append_bits(out,poped,next);
+	ans+=poped;
 
-	return 0; 
+	return ans; 
 } 
 
-uint32_t RLE_decoding(LinkedList* in,uint32_t* length,LinkedList* out,uint8_t window,bool free_in){
-	uint8_t size=(window+7)/8;
+l_t RLE_decoding(LinkedList* in, l_t* length, LinkedList* out, uint8_t window, bool free_in) {
+    printf("length: %u \n",*length );
+    l_t ans = 0;
+    l_t run=0;
+    uint8_t zero = 0;
+    uint8_t one = 1;
 
-	uint8_t data[size];
-	memset(data,0,size);
+    uint8_t size = (window + 7) / 8;
 
-	uint8_t keep=0;
-	uint64_t run=0;
+    uint8_t next[size];
+    uint8_t curent[size];
+    memset(next, 0, size);
 
-	bc_t poped; 
+    bc_t poped;
+    while (window+1 <= *length) {
+        poped = pop_bits(in, 1, next, free_in);
+        if(!poped){
+        	printf("wtf!!! \n" );
+        	printf("length: %u \n",*length );
+        	return ans;
+        }
+        *length -= poped;
 
-	while(!keep){
-		poped=pop_bits(in,1,&keep,free_in);
-		*length-=poped;
-		if(!poped){
-			return 0;
-		}
-		run+=1;
+        if (!(next[0] & 1)) {
+        	printf("zero continuing\n");
+            run+=1;
+        } else {
+        	//func
+        	printf("one droping");
+            poped = pop_bits(in, window, next, free_in);
+            *length -= poped;
+            printf("length: %u \n",*length );
+            show_arr(next,size);
+            for(l_t i=0;i<run+1;i++){
+	            append_bits(out, window, next);  
+            }
+            ans += window*run;
+            run=0;
+        }
+    }
+
+    // Remainder
+    poped = pop_bits(in, *length, next, free_in);
+    *length -= poped;
+    printf("length: %u \n",*length );
+    show_arr(next,size);
+    append_bits(out, poped, next);
+    ans += poped;
+    return ans;
+}
+
+l_t padded_length(l_t x){
+	int padding=8-(x%8)-3;//3 bits for the padding counter;
+	if(padding<0){
+		padding+=8;
 	}
-	if(*length<window){
-		//do something
-	}
+	return x+padding+3;
+}
 
-	else{
-		//should always be window
-		poped=pop_bits(in,window,data,free_in);
-		*length-=poped;
-		for(int i=0;i<run;i++){
-			append_bits(out,poped,data);
-		}
-	}
-	
-} 
-
+//tested:
 void PAD(LinkedList* in){
 	LinkedList copy=*in;
 	while(copy.tail->next){
 		copy.tail=copy.tail->next;
 	} 
-	printf("last block:%d   ",copy.last_block_length);
+	//printf("last block:%d   ",copy.last_block_length);
 	int padding=8-(copy.last_block_length%8)-3;
-	printf("padding number:%d",padding);
+	//printf("padding number:%d",padding);
 
 	uint8_t stock=0;
 	if(padding<0){
 		padding+=8;
-		printf("  changed padding number:%d",padding);
+		//printf("  changed padding number:%d",padding);
 		// append_bits(&copy,8, &stock);
 	}
-	printf("\n");
+	//printf("\n");
 	append_bits(&copy,padding, &stock);
 	stock=padding;
 	append_bits(&copy,3, &stock);
 	in->last_block_length=copy.last_block_length;
+	//return padding+3;
 }
 //mpt done:
 static Node* get_prelast(LinkedList* copy){
@@ -123,7 +159,7 @@ bool UNPAD(LinkedList* in){
 	LinkedList copy=*in;
 	
 	//exceptions
-	printf("last_block_length :%d   ",copy.last_block_length);
+	//printf("last_block_length :%d   ",copy.last_block_length);
 	if(copy.last_block_length%8)return false;
 	
 	Node* prelast=NULL;
@@ -135,7 +171,7 @@ bool UNPAD(LinkedList* in){
 	//finding the padding
 	int idx=copy.last_block_length-3;
 	
-	printf("initial idx:%d",idx);
+	//printf("initial idx:%d",idx);
 	if(idx<0) return false; //idx should always be at least 4 in all valid blocks
 	
 
@@ -145,7 +181,7 @@ bool UNPAD(LinkedList* in){
 
 	//setting
 	idx-=padding;
-	printf("   minus padding:%d",idx);
+	//printf("   minus padding:%d",idx);
 	if(idx<=0){
 		//this is where the bug is at
 		if(!prelast){
@@ -159,17 +195,17 @@ bool UNPAD(LinkedList* in){
 		prelast->next=NULL;
 		idx+=MAX_BIT_SIZE;
 		padding-=8;
-		printf("  fixed overflow:%d",idx);
+		//printf("  fixed overflow:%d",idx);
 	}
 
-	printf("\n");
+	//printf("\n");
 	in->last_block_length=idx;
 
 	//reseting the pad to 0 
 	copy.last_block_length=idx; 
 	padding+=3; //acounting for the 3 bits that right the pading
 	uint8_t zero[2]={0};
-	printf("num zeros:%d\n",padding);
+	//printf("num zeros:%d\n",padding);
 	append_bits(&copy, padding, zero);
 	return true;
 }

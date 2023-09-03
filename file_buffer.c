@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "file_buffer.h"
-
+#include"debugc.c"
 
 
 bool readBytesFromFile(const char* filename, LinkedList* list) {
@@ -154,6 +154,8 @@ bc_t pop_bits(LinkedList* list, const bc_t num, uint8_t* out, bool free_list){
                 free(list->tail);
                 //temp->next=NULL;
                 list->tail = temp;
+                if(!temp){return size;}
+
             }
             else{
                 if(!list->tail->next){return size;}
@@ -175,21 +177,26 @@ bc_t pop_bits(LinkedList* list, const bc_t num, uint8_t* out, bool free_list){
 }
 
 bool append_bits(LinkedList* list, const bc_t num, uint8_t* in) {
-    if(num==0){return true;}
+    //if(num==0){return true;}
     bc_t pos = 0;
 
     while (pos < num) {
 
         // If we've filled up the current node
         if (list->last_block_length >= MAX_BIT_SIZE) {
-            
-            list->tail->next = (Node*)malloc(sizeof(Node));
-            if (!list->tail->next) {
-                return false;  // Memory allocation failure
+            if(list->tail->next){
+                list->tail=list->tail->next;
             }
-            memset(list->tail->next->data, 0, sizeof(list->tail->next->data)); // Initialize to 0
-            list->tail = list->tail->next;
-            list->tail->next= NULL;
+
+            else{
+                list->tail->next = (Node*)malloc(sizeof(Node));
+                if (!list->tail->next) {
+                    return false;  // Memory allocation failure
+                }
+                memset(list->tail->next->data, 0, sizeof(list->tail->next->data)); // Initialize to 0
+                list->tail = list->tail->next;
+                list->tail->next= NULL;
+            }
    
             list->last_block_length = 0;
         } 

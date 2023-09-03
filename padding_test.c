@@ -37,7 +37,7 @@ LinkedList random_list(pcg32_random_t* rng,int length) {
     }
     uint8_t extra=(length%8);
     if (extra){
-        uint8_t byte = 255%(1<<extra); //pcg32_random_r(rng)
+        uint8_t byte = pcg32_random_r(rng)%(1<<extra); //
         append_bits(&list, extra, &byte);
     }
 
@@ -50,7 +50,7 @@ int main() {
     pcg32_random_t rng= get_rng();
     LinkedList list;
     LinkedList list2;
-    for(int i=1;i<MAX_BIT_SIZE*4;i++){
+    for(int i=1;i<=MAX_BIT_SIZE*4;i++){
         
         printf("original:%d\n",i);
         list=random_list(&rng,i);
