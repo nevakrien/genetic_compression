@@ -9,3 +9,15 @@ I am mainly just experimenting with the compression itself. I may end up using i
 
 ## 🎯 Target Architecture
 I'm specifically targeting the x86 architecture 🖥, primarily because that's the computer I have. I'm just crossing my fingers 🤞 that it ports well to CUDA. 
+
+## 📜 Development History
+
+Strap in for a rollercoaster of trial, error, and aha-moments:
+
+1. **📦 The C++ Byte Affair**: Launched with C++ and bytes, aiming for what felt like the computer's love language. Turns out, it was more of a fling than a committed relationship. This iteration never saw the light of GitHub. 🤷‍♀️
+
+2. **🔗 Bit Buffers & C**: Realizing that bytes were the wrong bait, I pivoted to a linked list approach for bit buffers. I was gunning for that elusive compression magic, but instead stumbled into bug city. 🎉
+
+3. **🛠 C & The Array Adventure**: Taking lessons from my previous detours, I doubled down on C but chose arrays as my trusty sidekick. Enter segfaults, C's way of saying 'Welcome to the big leagues!' 💁‍♀️
+
+Your thoughts and feedback on my ongoing array escapade would be invaluable. Here's hoping this is the iteration that sticks! 🍀

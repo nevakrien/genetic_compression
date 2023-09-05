@@ -15,47 +15,89 @@ l_t RLE_encoding(LinkedList* in,l_t* length,LinkedList* out,uint8_t window,bool 
 	uint8_t one=1;
 
 	uint8_t size=(window+7)/8;
+	printf("size: %u",size);
 
 	uint8_t next[size];
 	uint8_t curent[size];
 	memset(next,0,size);
 	memset(curent,0,size);
 
+	bool pending_write=false;
 	
 	bc_t poped=pop_bits(in,window,next,free_in);
 	printf("poped:%u\n",poped);
 	*length-=poped;
-	memcpy(curent,next,size); 
+	
 
+	if(poped!=window){
+			append_bits(out,poped,next);
+			printf("exited first check\n");
+			return poped;
+		}
 
-	while((poped==window) && window<=*length){
+	memcpy(curent,next,size);
+
+	int compares=0;
+
+	while(window<=*length){
+		// memset(next,0,size); //shouldnt be needed
 		poped=pop_bits(in,window,next,free_in);
 		*length-=poped;
+		if(poped!=window){
+			if(pending_write){
+				//wright the last run token
+				append_bits(out, 1, &one);
+				append_bits(out,window,curent); 
+				ans+=1+window;
+			}
+			//wright the remainder
+			append_bits(out,poped,next);
+			ans+=poped;
+			printf("exited because of pop:%d\n",poped);
+			return ans; 
+
+		}
+		printf("compare: %d next: ", compares);
+		for(int i = 0; i < size; i++) {
+		    printf("%02x ", next[i]);
+		}
+		printf("curent: ");
+		for(int i = 0; i < size; i++) {
+		    printf("%02x ", curent[i]);
+		}
+		printf("\n");
+
+		compares+=1;
 		if(memcmp(next,curent,size)==0){
+			pending_write=true;
 			append_bits(out, 1, &zero);
 			ans+=1;
 		}
 
 		else{
+			pending_write=false;
 			append_bits(out, 1, &one);
 			append_bits(out,window,curent);
 			ans+=1+window;
 			memcpy(curent,next,size); 
 		}
+		
 	}
-	//wright the last run token
-	append_bits(out, 1, &one);
-	append_bits(out,window,curent); 
-	ans+=1+window;
 
+	if(pending_write){
+		//wright the last run token
+		append_bits(out, 1, &one);
+		append_bits(out,window,curent); 
+		ans+=1+window;
+	}
+	
 	//remainder
-	append_bits(out,poped,next);
-	ans+=poped;
 	poped=pop_bits(in,*length,next,free_in);
 	*length-=poped;
 	append_bits(out,poped,next);
 	ans+=poped;
 
+	printf("exited because of length\n");
 	return ans; 
 } 
 
@@ -87,7 +129,7 @@ l_t RLE_decoding(LinkedList* in, l_t* length, LinkedList* out, uint8_t window, b
             run+=1;
         } else {
         	//func
-        	printf("one droping");
+        	printf("one droping  ");
             poped = pop_bits(in, window, next, free_in);
             *length -= poped;
             printf("length: %u \n",*length );

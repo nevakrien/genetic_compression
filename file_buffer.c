@@ -5,8 +5,6 @@
 #include <string.h>
 
 #include "file_buffer.h"
-//#include"debug.c"
-
 
 bool readBytesFromFile(const char* filename, LinkedList* list) {
     FILE* file = fopen(filename, "rb");
@@ -91,7 +89,6 @@ void cleanupLinkedList(LinkedList* list) {
 
 
 
-
 LinkedList create_empty_list(){
    Node* head = (Node*)malloc(sizeof(Node));
    memset(head->data,0,BLOCK_BYTES);
@@ -146,7 +143,7 @@ static bc_t pop_bits_end(bc_t* size,LinkedList* list, bc_t num, uint8_t* out){
     //bc_t size = 0;
     num=num>list->last_block_length ? list->last_block_length : num; 
 
-    while(*size < num && list->tail){
+    while(*size < num){
         
         bc_t bits_to_pop=room_finder(list->current_bit,*size,num - *size);
 
@@ -173,12 +170,12 @@ static bc_t pop_bits_regular(LinkedList* list,const bc_t num, uint8_t* out, bool
                 free(list->tail);
                 //temp->next=NULL;
                 list->tail = temp;
-                if(!temp){return size;}
+                if(!temp->next){return size;}
 
             }
             else{
-                if(!list->tail->next){return size;}
                 list->tail = list->tail->next;
+                if(!list->tail->next){return size;}
             }
         }
 
@@ -221,7 +218,7 @@ bool append_bits(LinkedList* list, const bc_t num, uint8_t* in) {
                 if (!list->tail->next) {
                     return false;  // Memory allocation failure
                 }
-                memset(list->tail->next->data, 0, sizeof(list->tail->next->data)); // Initialize to 0
+                memset(list->tail->next->data, 0, BLOCK_BYTES); // Initialize to 0
                 list->tail = list->tail->next;
                 list->tail->next= NULL;
             }

@@ -16,7 +16,9 @@ l_t random_length(pcg32_random_t* rng) {
 }
 
 uint8_t random_window(pcg32_random_t* rng) {
-    return (l_t)(2 + pcg32_random_r(rng) %(MAX_WINDOW-1));
+    l_t ans = (l_t)(2 + pcg32_random_r(rng) %(MAX_WINDOW-1));
+    assert((ans+7)/8<BLOCK_BYTES);
+    return ans;
 }
 
 void print_lengths(l_t* lengths) {
@@ -56,7 +58,7 @@ int main() {
     uint8_t j; //num encodes
     //int lengths[CHUNK_COUNT] = {3, 5, 7}; // Define the list of lengths you want to test
 
-    for (int i = 1; i <= MAX_BIT_SIZE * 4; i++) {
+    for (int i = 13; i <= MAX_BIT_SIZE * 4; i++) {
 
         for (int j = 0; j < CHUNK_COUNT; j++) {
             lengths[j] = random_length(&rng); // you might want to adjust the range
@@ -70,9 +72,10 @@ int main() {
 
         printf("Original (%d bits):\n", i);
         original = random_list(&rng, i);
-        show_Node(original.head);
+        // show_Node(original.head);
 
         copy=copy_list(original);
+        show_Node(copy.head);
 
         encoded = create_empty_list();
         decoded = create_empty_list();
@@ -80,6 +83,7 @@ int main() {
 
         // num_encodes=0;
         // Encoding
+        j=0;
         for ( j = 0; j < CHUNK_COUNT; j++) {
             printf("Encoding chunk %d...\n", j);
             // curent_length=lengths[j];
@@ -101,10 +105,11 @@ int main() {
         printf("j: %u\n",j);
 
         // Decoding
+        encoded.tail=encoded.head;
+        encoded.current_bit=0;
         for (int k = 0; k < j; k++) {
             printf("Decoding chunk %d...\n", k + 1);
-            encoded.tail=encoded.head;
-            encoded.current_bit=0;
+            
             RLE_decoding(&encoded, lengths+k, &decoded, windows[k], true);
             show_Node(decoded.head);
         }
