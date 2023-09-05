@@ -16,8 +16,9 @@ Strap in for a rollercoaster of trial, error, and aha-moments:
 
 1. **📦 The C++ Byte Affair**: Launched with C++ and bytes, aiming for what felt like the computer's love language. Turns out, it was more of a fling than a committed relationship. This iteration never saw the light of GitHub. 🤷‍♀️
 
-2. **🔗 Bit Buffers & C**: Realizing that bytes were the wrong bait, I pivoted to a linked list approach for bit buffers. I was gunning for that elusive compression magic, but instead stumbled into bug city. 🎉
+2. **🔗 Bit Buffers & C with Linked Lists**: When bytes didn't hit the sweet spot, I moved to a linked list structure for bit buffers in C. Dreaming of seamless compression, I instead received an invitation to the bug masquerade. 🎉
 
-3. **🛠 C & The Array Adventure**: Taking lessons from my previous detours, I doubled down on C but chose arrays as my trusty sidekick. Enter segfaults, C's way of saying 'Welcome to the big leagues!' 💁‍♀️
+3. **🛠 Array Ambitions**: Taking cues from past endeavors, I've set my sights on arrays for the next leg of this journey in C. Haven't ventured too deep yet, but I'm staying vigilant for any surprise segfault party invitations. 💁‍♀️
+
 
 Your thoughts and feedback on my ongoing array escapade would be invaluable. Here's hoping this is the iteration that sticks! 🍀
