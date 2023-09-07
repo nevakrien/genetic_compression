@@ -55,7 +55,7 @@ bit_c_t RLE_encode(bit_buffer_t* in,bit_c_t start,bit_c_t end,bit_buffer_t* out,
 		else{
 			//printf("diffrent\n");
 			pending_write=false;
-			//write_to(out,pos,true);
+			write_to(out,pos,true);
 			//printf("writing 1 to %lu\n",pos);
 			pos+=1;
 			for(bit_c_t k=i;k<i+window;k++){
@@ -67,7 +67,7 @@ bit_c_t RLE_encode(bit_buffer_t* in,bit_c_t start,bit_c_t end,bit_buffer_t* out,
 	//printf("ended loop with %lu\n",i);
 	if(pending_write){
 		//printf("pending write\n");
-		//write_to(out, pos-1, true);
+		//!!!!!!! write_to(out, pos-1, true);
 		write_to(out, pos, true);
 		//printf("writing 1 to %lu\n",pos);
 		pos+=1;		
@@ -97,19 +97,21 @@ bit_c_t RLE_encode(bit_buffer_t* in,bit_c_t start,bit_c_t end,bit_buffer_t* out,
 //reserve total:((X-1)*window)
 bit_c_t RLE_decode(bit_buffer_t* in,bit_c_t start,bit_c_t end,bit_buffer_t* out,bit_c_t pos,window_t window){
 	bit_c_t run=0;
-	bit_c_t i;
-	//printf("Decode\nloop from %lu to %lu:\n",start,end);
-	for(i=start;i+window<end;i++){//window+1
+	bit_c_t i=start;
+	//printf("\n\nDecode\nloop from %lu to %lu:\n",start,end);
+	while(i+window<end){//window+1
 		//printf("\nstarting loop with %lu\n",i);
+		//printf("read: %u from %lu\n",read_from(in, i),i);
 		run+=1;
 		if(read_from(in, i)){
-			i+=1;//?
+			i+=1;
 			//printf("writing %lu bits\n",(window)*run);
 			//write run times the next window tokens.
 			for(bit_c_t cap=i+window;i<cap;i++){
 				bool temp=read_from(in,i);
+				//printf("read %u from %lu\n",temp,i);
 				for(bit_c_t k=0;k<run; k++){
-					write_to(out,pos+k,temp);
+					write_to(out,pos+k*window,temp);
 					//printf("writing %u to %lu\n",temp,pos+k);
 				}
 				pos+=1;
@@ -117,10 +119,9 @@ bit_c_t RLE_decode(bit_buffer_t* in,bit_c_t start,bit_c_t end,bit_buffer_t* out,
 			//printf("done writing with %lu\n",i);
 			pos+=window*(run-1);
 			run=0;
-			if(i+window>=end){
-				//printf("broke with %lu\n",i);
-				break;
-			}
+		}
+		else{
+			i+=1;
 		}
 	}
 	//printf("ended loop with %lu\n",i);

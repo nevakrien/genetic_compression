@@ -32,12 +32,12 @@ void show_buffer(bit_buffer_t* buffer,bit_c_t size){
 
 void test_rle(bit_c_t N,pcg32_random_t* rng){
 	bit_buffer_t* original=random_buffer(N,rng);
-	show_buffer(original,N);
+	//show_buffer(original,N);
 	bit_buffer_t* encoded =init_buffer(N);
 	bit_buffer_t* decoded =init_buffer(N);
 
 	for(window_t window=1;window<N+2;window++){
-		//printf("window: %d\n",window);
+		printf("window: %d\n",window);
 
 		resize_buffer(encoded,N+N/window);
 		bit_c_t encoded_size =RLE_encode(original,0,N,encoded,0, window);
