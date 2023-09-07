@@ -66,12 +66,13 @@ void write_to(bit_buffer_t* buffer, bit_c_t idx, bool value)
 		buffer->blocks[block_idx][bit_idx / 8] &= ~(1 << (bit_idx % 8));
 	}
 }
-
+#include <stdlib.h>
 bool read_from(bit_buffer_t* buffer, bit_c_t idx) 
 {
 	if (idx >= buffer->size) 
     {
-		//fprintf(stderr, "Index out of bounds\n");
+		fprintf(stderr, "Index out of bounds operating new crash behvior\n");
+		exit(0);
 		return false;
 	}
 
@@ -162,7 +163,7 @@ void reserve_buffer(bit_buffer_t* buffer,bit_c_t size)
 	bit_c_t num_new_blocks=num_blocks-num_existing_blocks;
 	
 	buffer->size=size;
-	
+
 	if(!num_new_blocks){
 		return;
 	}
@@ -173,6 +174,34 @@ void reserve_buffer(bit_buffer_t* buffer,bit_c_t size)
     {
 		buffer->blocks[i] = (uint8_t*) calloc(BLOCK_BYTES, sizeof(uint8_t));
 	}
+}
+
+void resize_buffer(bit_buffer_t* buffer, bit_c_t new_size) 
+{
+	// Calculate the number of blocks needed for the new size.
+	bit_c_t num_new_blocks = (new_size + BLOCK_BITS - 1) / BLOCK_BITS;
+
+	// If the new size is larger than the current size, we increase the size.
+	if (new_size > buffer->size) 
+	{
+		reserve_buffer(buffer, new_size);
+		return;
+	}
+
+	// Calculate the number of existing blocks.
+	bit_c_t num_existing_blocks = (buffer->size + BLOCK_BITS - 1) / BLOCK_BITS;
+
+	// Free blocks that are not needed after resizing.
+	for (bit_c_t i = num_new_blocks; i < num_existing_blocks; i++) 
+	{
+		free(buffer->blocks[i]);
+	}
+
+	// Reallocate the blocks pointer array.
+	buffer->blocks = (uint8_t**) realloc(buffer->blocks, num_new_blocks * sizeof(uint8_t*));
+
+	// Update buffer's size.
+	buffer->size = new_size;
 }
 
 
