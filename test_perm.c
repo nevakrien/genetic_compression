@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <assert.h> 
 
-#define TEST_SIZE 1000
+#define TEST_SIZE 100
 
 bit_buffer_t* random_buffer(bit_c_t size,pcg32_random_t* rng){
 	bit_buffer_t* buffer =init_buffer(size);
@@ -29,16 +29,16 @@ void show_buffer(bit_buffer_t* buffer,bit_c_t size){
 	printf("\n");
 }
 
-void test_xor(bit_c_t N,window_t window,pcg32_random_t* rng){
+void test_perm(bit_c_t N,window_t window,pcg32_random_t* rng){
 	bit_buffer_t* original=random_buffer(N,rng);
 	//show_buffer(original,N);
 	bit_buffer_t* encoded =init_buffer(N);
 	bit_buffer_t* decoded =init_buffer(N);
 
-	window_t max=pcg32_random_r(rng);
-	window_t min=pcg32_random_r(rng); 
+	window_t max=pcg32_random_r(rng)%window;
+	window_t min=pcg32_random_r(rng)%window; 
 	//window_t window=1+(pcg32_random_r(rng)%100); 
-	//printf("window %u\n",window);
+	//read_from(in,i)printf("window %u\n",window);
 
 	CONDITIONAL_PERMUTE(original,0,N,encoded,0,window, max, min);
 	CONDITIONAL_PERMUTE(encoded,0,N,decoded,0,window, max, min);
@@ -59,12 +59,12 @@ void test_xor(bit_c_t N,window_t window,pcg32_random_t* rng){
 int main() {
 
     pcg32_random_t rng = get_rng();
-    for (int i = 10; i < TEST_SIZE; i++) {
+    for (int i = 0; i < TEST_SIZE; i++) {
     	printf("testing: %d\n",i);
     	//fflush(stdout);
     	for(window_t w=1; w<=i+2;w++){
     		printf("window: %u\n",w);
-    		test_xor(i,w,&rng);
+    		test_perm(i,w,&rng);
     	}
         
     }
