@@ -1,3 +1,5 @@
+#ifndef FUNCS_C
+#define FUNCS_C
 #include "bit_buffer.c"
 
 //each function comes with a reserve instruction. make sure to have X+reserve memory in the new destivation; 
@@ -149,3 +151,75 @@ bit_c_t RLE_decode(bit_buffer_t* in,bit_c_t start,bit_c_t end,bit_buffer_t* out,
 	//printf("done decoding\n\n");
 	return pos;
 }
+
+//reserve(0)
+void XOR(bit_buffer_t* in,bit_c_t start,bit_c_t end,bit_buffer_t* out,bit_c_t pos,window_t state, window_t increment,window_t mul, window_t period){
+	for(bit_c_t i=start;i<end;i++){
+		state=(state*mul+increment)%period; 
+		bool key=state%2;
+		write_to(out,pos,read_from(in,i)!=key);
+		pos++;	
+	}
+}
+
+//untested:
+static bool is_swap(bit_buffer_t* in,bit_c_t start,window_t window,window_t max,window_t min){
+	window_t same=0;
+	for(bit_c_t i=start;i<start+window;i++){
+		if(read_from(in,i)==read_from(in,i+window)){
+			same+=1;
+			if(same>max){
+				return false;
+			}
+		}
+	}
+	if(same<min){
+		return false;
+	}
+	return true;
+}
+//reserve(0)
+void CONDITIONAL_PERMUTE(bit_buffer_t* in,bit_c_t start,bit_c_t end,bit_buffer_t* out,bit_c_t pos,window_t const window,window_t max,window_t min){
+	if(2*window>end-start){
+		for(bit_c_t i=start;i<end;i++){
+			write_to(out,pos,read_from(in,i));
+			pos+=1;
+		}
+		return;
+	}
+	bit_c_t i=start;
+	while(i+2*window<end){
+		//printf("whilig\n");
+		if(!is_swap(in,i,window,max,min)){
+			//put window in the new list
+			start+=2*window;
+			for(;i<start;i++){
+				//printf("reading %lu",i);
+				write_to(out,pos,read_from(in,i));
+				pos+=1;
+			}
+			continue;
+		}
+		start+=window;
+		for(;i<start;i++){
+			//printf("reading %lu",i);
+			write_to(out,pos+window,read_from(in,i));
+			pos+=1;
+		}
+		start+=window;
+		for(;i<start;i++){
+			//printf("reading %lu",i);
+			write_to(out,pos-window,read_from(in,i));
+			pos+=1;
+		}
+		//printf("\n");
+	}
+
+	for(;i<end;i++){
+		write_to(out,pos,read_from(in,i));
+		//printf("remainder %lu",i);
+		pos+=1;
+	}
+	//printf("\n");
+}
+#endif //FUNCS_C
